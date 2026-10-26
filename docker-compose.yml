@@ -1,0 +1,71 @@
+# Start:  docker compose up -d        → http://<IP-des-Servers>:8080
+# Mit USB-Drucker direkt am Server:   AGENT_TOKEN=… docker compose --profile usb up -d
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bestell
+      POSTGRES_USER: bestell
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-bestell}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bestell -d bestell"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  app:
+    build: .
+    image: bestellsystem:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://bestell:${DB_PASSWORD:-bestell}@db:5432/bestell
+      APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Berlin}
+    ports:
+      - "${PORT:-8080}:8080"
+
+  # Sicherung alle 10 Minuten nach ./backups, Dateien älter als 3 Tage werden gelöscht.
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${DB_PASSWORD:-bestell}
+    volumes:
+      - ./backups:/backups
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          pg_dump -h db -U bestell -d bestell -Fc -f /backups/bestell-$$(date +%Y%m%d-%H%M).dump \
+            && find /backups -name 'bestell-*.dump' -mmin +4320 -delete
+          sleep 600
+        done
+
+  # Optional: Druck-Agent für USB-Drucker, die direkt an diesem Rechner stecken.
+  print-agent:
+    profiles: ["usb"]
+    build:
+      context: .
+      dockerfile: apps/agent/Dockerfile
+    image: bestellsystem-agent:latest
+    restart: unless-stopped
+    depends_on: [app]
+    # Zugriff auf /dev/usb/lp* auch nach Aus- und Einstecken des Druckers.
+    privileged: true
+    volumes:
+      - /dev:/dev
+    environment:
+      SERVER_URL: http://app:8080
+      AGENT_TOKEN: ${AGENT_TOKEN:-}
+
+volumes:
+  db-data:
