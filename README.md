@@ -92,4 +92,7 @@ Das System ist als **Bestellsystem ohne Zahlungsfunktion** gebaut: Es erfasst un
 speichert keine Zahlungen. Die Rechnungshilfe ist ein Rechner, der nichts speichert.
 Ob ein konkreter Einsatz (z. B. To-Go mit Barzahlung am selben Gerät) steuerlich als
 Kassenfunktion gilt, entscheidet die Funktion und nicht der Name. Das bitte mit
-Steuerberater oder Finanzamt klären. Siehe [docs/PLAN.md](docs/PLAN.md), Kapitel 0.
+Steuerberater oder Finanzamt klären. Die ausführliche Einordnung mit Rechtsgrundlagen,
+Bedingungen und Grauzonen steht in [docs/TSE-ABGRENZUNG.md](docs/TSE-ABGRENZUNG.md)
+und im Admin-Bereich unter **TSE-Abgrenzung** (mit Prüfung der aktuellen Einstellungen
+und Druckfunktion).

@@ -20,6 +20,7 @@ import { StationsPage } from './StationsPage';
 import { StatsPage } from './StatsPage';
 import { TablesPage } from './TablesPage';
 import { TenantsPage } from './TenantsPage';
+import { TsePage } from './TsePage';
 import { UsersPage } from './UsersPage';
 
 interface AdminEventContext {
@@ -53,6 +54,7 @@ const NAV: { to: string; label: string; superadmin?: boolean }[] = [
   { to: '/admin/einstellungen', label: 'Einstellungen' },
   { to: '/admin/statistik', label: 'Statistik' },
   { to: '/admin/protokoll', label: 'Protokoll' },
+  { to: '/admin/tse', label: 'TSE-Abgrenzung' },
   { to: '/admin/vereine', label: 'Vereine', superadmin: true },
 ];
 
@@ -122,6 +124,7 @@ export function AdminApp() {
     <EventContext.Provider value={ctx}>
       <div className="flex min-h-full flex-col">
         <TopBar
+          className="print:hidden"
           title="Admin"
           subtitle={me?.tenant?.name}
           right={
@@ -135,7 +138,7 @@ export function AdminApp() {
           }
         />
         <div className="flex flex-1">
-          <aside className="hidden w-56 shrink-0 border-r border-slate-200 bg-white lg:block">
+          <aside className="hidden w-56 shrink-0 border-r border-slate-200 bg-white lg:block print:hidden">
             <EventPicker />
             {nav}
           </aside>
@@ -161,6 +164,7 @@ export function AdminApp() {
               <Route path="einstellungen" element={<SettingsPage />} />
               <Route path="statistik" element={<StatsPage />} />
               <Route path="protokoll" element={<AuditPage />} />
+              <Route path="tse" element={<TsePage />} />
               <Route path="vereine" element={<TenantsPage />} />
             </Routes>
           </main>

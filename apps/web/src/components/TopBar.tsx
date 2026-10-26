@@ -27,12 +27,14 @@ export function TopBar({
   back,
   right,
   dark = true,
+  className,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
   back?: string | (() => void);
   right?: ReactNode;
   dark?: boolean;
+  className?: string;
 }) {
   const navigate = useNavigate();
   return (
@@ -40,6 +42,7 @@ export function TopBar({
       className={cn(
         'sticky top-0 z-30 flex min-h-14 items-center gap-2 px-3 pt-[env(safe-area-inset-top)]',
         dark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900 shadow-sm',
+        className,
       )}
     >
       {back && (

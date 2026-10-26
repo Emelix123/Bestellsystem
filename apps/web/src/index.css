@@ -28,3 +28,64 @@ textarea {
 .bon-paper {
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
 }
+
+/* Fließtext-Dokumente im Admin-Bereich (z. B. TSE-Abgrenzung) */
+.doc-prose {
+  @apply text-[15px] leading-relaxed text-slate-800;
+}
+.doc-prose h1 {
+  @apply mb-2 text-2xl font-bold text-slate-900;
+}
+.doc-prose h2 {
+  @apply mt-8 mb-3 border-b border-slate-200 pb-1 text-xl font-bold text-slate-900;
+}
+.doc-prose h3 {
+  @apply mt-5 mb-2 text-base font-semibold text-slate-900;
+}
+.doc-prose p,
+.doc-prose ul,
+.doc-prose ol,
+.doc-prose blockquote,
+.doc-prose table {
+  @apply my-3;
+}
+.doc-prose ul {
+  @apply list-disc pl-6;
+}
+.doc-prose ol {
+  @apply list-decimal pl-6;
+}
+.doc-prose li {
+  @apply my-1;
+}
+.doc-prose blockquote {
+  @apply border-l-4 border-slate-300 bg-slate-50 py-1 pr-3 pl-4 text-slate-700;
+}
+.doc-prose a {
+  @apply text-sky-700 underline underline-offset-2;
+}
+.doc-prose hr {
+  @apply my-6 border-slate-200;
+}
+.doc-prose code {
+  @apply rounded bg-slate-100 px-1 py-0.5 text-sm;
+}
+.doc-prose table {
+  @apply block w-full overflow-x-auto text-sm;
+}
+.doc-prose th,
+.doc-prose td {
+  @apply border border-slate-200 px-3 py-1.5 text-left align-top;
+}
+.doc-prose th {
+  @apply bg-slate-50 font-semibold;
+}
+
+@media print {
+  body {
+    background: white;
+  }
+  .doc-prose a {
+    color: inherit;
+  }
+}
