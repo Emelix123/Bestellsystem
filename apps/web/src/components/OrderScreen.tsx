@@ -87,6 +87,12 @@ function ProductTile({
       type="button"
       disabled={product.soldOut}
       {...handlers}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          (product.optionGroupIds.length > 0 ? onDetails : onAdd)();
+        }
+      }}
       className={cn(
         'relative flex min-h-20 select-none flex-col justify-between rounded-2xl bg-white p-3 text-left shadow-sm ring-1 ring-slate-200 transition active:scale-95',
         product.soldOut && 'opacity-40',

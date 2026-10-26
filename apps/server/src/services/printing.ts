@@ -79,7 +79,11 @@ export class PrintService {
     private log: Logger,
   ) {
     agentHub.events = {
-      onConnect: (agentId, tenantId) => void this.refreshAgentPrinters(agentId, tenantId),
+      // Gerätestatus erst bewerten, wenn der Agent seine Geräteliste geschickt hat ("hello").
+      onConnect: (agentId, tenantId) => {
+        this.hub.broadcast(tenantId, { type: 'agent', agentId, connected: true });
+        this.kick();
+      },
       onDevices: (agentId, tenantId) => void this.refreshAgentPrinters(agentId, tenantId),
       onDisconnect: (agentId, tenantId) => void this.handleAgentDisconnect(agentId, tenantId),
       onResult: (agentId, jobId, ok, error) => void this.handleAgentResult(agentId, jobId, ok, error),

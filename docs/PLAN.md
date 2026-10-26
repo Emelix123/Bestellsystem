@@ -1,8 +1,51 @@
-# Bestellsystem für Vereinsfeste – Plan (Entwurf v1)
+# Bestellsystem für Vereinsfeste – Plan
 
-Stand: Entwurf zur Abstimmung, noch keine Zeile Code.
-Ziel dieses Dokuments: gemeinsames Verständnis herstellen, offene Entscheidungen
-sichtbar machen, Umsetzung in sinnvolle Etappen schneiden.
+Stand: v2 – Entscheidungen getroffen, Etappen 1–4 umgesetzt (siehe unten).
+Ursprünglicher Entwurf (v1) ab Kapitel 0, ergänzt um die getroffenen Entscheidungen.
+
+## Entscheidungen (Abstimmung nach v1)
+
+| Frage | Entscheidung | Umsetzung |
+|---|---|---|
+| Weg aus Kapitel 0 | **B** – Bedienung kassiert bar, System ohne Zahlungsfunktion | Es werden keine Zahlungen gespeichert. Die Rechnungshilfe ist ein reiner Rechner, pro Verein ein- und ausschaltbar (Standard: aus). Euro-Werte in der Statistik sind separat schaltbar (Standard: aus). |
+| Küche mit Tablet | Bon kommt, wenn die Küche **„Fertig“** drückt | Druck-Zeitpunkt pro Station: sofort / beim Annehmen / beim Fertigmelden / nie |
+| Betrieb | **lokal**, vorhandenes WLAN-Intranet | Docker Compose auf einem Rechner im Netz, kein Internet nötig |
+| Mandanten | **pro Verein unterschiedlich** | vollständige Mandantentrennung, Einstellungen pro Verein |
+| Varianten, Extras, Pfand | **ja** | Optionsgruppen (eine/mehrere, Pflicht, Auf-/Abpreis), Pfand pro Produkt, Pfand-Rückgabe in der Rechnungshilfe |
+| Drucker | **nur USB** (WLAN-Drucker waren unzuverlässig) | **Druck-Agent** auf einem kleinen Rechner am Drucker (siehe unten) |
+| Sprache/Wartung | TypeScript | wie vorgeschlagen |
+
+### Was sich durch „nur USB-Drucker“ an der Architektur geändert hat
+
+Ein USB-Drucker hängt an genau einem Rechner. Küche, Schank und Bierstand liegen
+aber auseinander, und USB-Kabel enden nach ein paar Metern. Deshalb läuft neben jedem
+Drucker (oder jeder Druckergruppe) ein **Druck-Agent**, z. B. auf einem Raspberry Pi.
+Der Agent baut selbst eine **WebSocket-Verbindung zum Server** auf und bekommt
+Aufträge sofort gepusht. Es gibt kein Polling und keine Portfreigaben. Die Aufträge
+liegen weiterhin in der Datenbank und gehen nicht verloren, wenn Agent, Drucker oder
+WLAN kurz weg sind.
+
+Ehrlicher Hinweis: Der Raspberry Pi hängt dann selbst am Netz, idealerweise per
+Kabel, sonst per WLAN. Der Unterschied zu WLAN-Druckern ist, dass Aussetzer jetzt
+**abgefangen** werden: Der Bon kommt verspätet, aber er kommt, in der richtigen
+Reihenfolge und ohne Doppeldruck. Am Admin-Bildschirm sieht man sofort, welcher
+Drucker gerade nicht erreichbar ist.
+
+## Umsetzungsstand
+
+| Etappe | Stand |
+|---|---|
+| 1 – Grundgerüst, Bestellen & Drucken | ✅ fertig |
+| 2 – Stationen mit Tablet-Warteschlange, Storno, Nachdruck, Ausverkauft | ✅ fertig |
+| 3 – To-Go mit Abholnummern, Abholbon, Abholmonitor | ✅ fertig |
+| 4 – Statistik, Diagramme, Excel/CSV-Export | ✅ fertig |
+| 5 – Mandanten, Rollen, Offline-Puffer, Backups, Betriebsanleitung | ✅ weitgehend. Offen: PostgreSQL-Row-Level-Security als zweite Sicherung (die Trennung erfolgt derzeit in jeder Abfrage und ist durch Tests abgedeckt), Lasttest mit vielen Geräten |
+| Mit echter Hardware testen | ⏳ **muss bei euch passieren**: USB-Drucker, Umlaute, Schneidwerk, WLAN-Abdeckung (Checkliste in `docs/BETRIEB.md`) |
+
+Bewusst **nicht** gebaut: Zahlungen erfassen, Kassenabschluss, Bedienungsabrechnung in
+Euro (siehe Kapitel 0).
+
+---
 
 ---
 
@@ -346,7 +389,7 @@ sich je Modell leicht unterschiedlich).
 
 ---
 
-## 10. Offene Fragen
+## 10. Offene Fragen (aus v1 – inzwischen beantwortet, siehe „Entscheidungen“ oben)
 
 1. **Welcher Weg aus Kapitel 0?** A (Wertmarken), B (Bedienung kassiert bar,
    System ohne Zahlungen) oder C (mit TSE)?
