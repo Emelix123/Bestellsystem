@@ -91,6 +91,16 @@ export async function buildApp(db: Db, config: Config, opts: { logger?: boolean 
   registerStatsRoutes(app, ctx);
   registerWsRoutes(app, ctx);
 
+  // Druck-Agent zum Herunterladen für den Raspberry Pi (siehe Admin → Drucker).
+  if (config.agentDownloads && fs.existsSync(config.agentDownloads)) {
+    await app.register(fastifyStatic, {
+      root: config.agentDownloads,
+      prefix: '/downloads/',
+      decorateReply: false,
+      allowedPath: (pathName) => pathName === '/agent.mjs' || pathName === '/install-agent.sh',
+    });
+  }
+
   // Gebaute Web-Oberfläche ausliefern (Single-Page-App).
   if (config.webDist && fs.existsSync(config.webDist)) {
     await app.register(fastifyStatic, { root: config.webDist, wildcard: false });
