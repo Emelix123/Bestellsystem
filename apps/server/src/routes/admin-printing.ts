@@ -55,6 +55,7 @@ export async function agentDtos(ctx: AppContext, tenantId: number): Promise<Agen
     name: a.name,
     connected: ctx.agentHub.isConnected(a.id),
     hostname: a.hostname,
+    platform: a.platform,
     version: a.version,
     lastSeenAt: iso(a.lastSeenAt),
     devices: ctx.agentHub.devices(a.id) ?? a.devices,
@@ -291,7 +292,8 @@ export function registerAdminPrintingRoutes(app: FastifyInstance, ctx: AppContex
   app.post('/api/admin/agents', async (req) => {
     const { auth, tenantId } = requireTenant(req, 'admin');
     const body = parse(z.object({ name: z.string().trim().min(1).max(60) }), req.body);
-    const token = randomToken();
+    // Präfix: Ein Token darf nie mit "-" beginnen (sonst hält ihn die Kommandozeile für eine Option).
+    const token = `agt_${randomToken()}`;
     const [row] = await ctx.db
       .insert(agents)
       .values({ tenantId, name: body.name, tokenHash: sha256(token) })
@@ -303,7 +305,8 @@ export function registerAdminPrintingRoutes(app: FastifyInstance, ctx: AppContex
   app.post('/api/admin/agents/:id/token', async (req) => {
     const { auth, tenantId } = requireTenant(req, 'admin');
     const { id } = parse(idParam, req.params);
-    const token = randomToken();
+    // Präfix: Ein Token darf nie mit "-" beginnen (sonst hält ihn die Kommandozeile für eine Option).
+    const token = `agt_${randomToken()}`;
     const [row] = await ctx.db
       .update(agents)
       .set({ tokenHash: sha256(token) })

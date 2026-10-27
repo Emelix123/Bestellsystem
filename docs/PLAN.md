@@ -40,7 +40,8 @@ Drucker gerade nicht erreichbar ist.
 | 3 – To-Go mit Abholnummern, Abholbon, Abholmonitor | ✅ fertig |
 | 4 – Statistik, Diagramme, Excel/CSV-Export | ✅ fertig |
 | 5 – Mandanten, Rollen, Offline-Puffer, Backups, Betriebsanleitung | ✅ weitgehend. Offen: PostgreSQL-Row-Level-Security als zweite Sicherung (die Trennung erfolgt derzeit in jeder Abfrage und ist durch Tests abgedeckt), Lasttest mit vielen Geräten |
-| Mit echter Hardware testen | ⏳ **muss bei euch passieren**: USB-Drucker, Umlaute, Schneidwerk, WLAN-Abdeckung (Checkliste in `docs/BETRIEB.md`) |
+| Mehrere Druck-Rechner an verschiedenen Standorten, auch **Windows** | ✅ fertig: ein Agent pro Rechner; unter Windows Druck über die Windows-Druckerwarteschlange im RAW-Modus, Installation per PowerShell-Skript als geplante Aufgabe |
+| Mit echter Hardware testen | ⏳ **muss bei euch passieren**: USB-Drucker, Umlaute, Schneidwerk, WLAN-Abdeckung (Checkliste in `docs/BETRIEB.md`). **Windows-Druck** ist nur mit simuliertem Druckdienst getestet. |
 
 Bewusst **nicht** gebaut: Zahlungen erfassen, Kassenabschluss, Bedienungsabrechnung in
 Euro (siehe Kapitel 0).

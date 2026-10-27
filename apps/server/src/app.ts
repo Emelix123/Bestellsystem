@@ -97,7 +97,7 @@ export async function buildApp(db: Db, config: Config, opts: { logger?: boolean 
       root: config.agentDownloads,
       prefix: '/downloads/',
       decorateReply: false,
-      allowedPath: (pathName) => pathName === '/agent.mjs' || pathName === '/install-agent.sh',
+      allowedPath: (pathName) => ['/agent.mjs', '/install-agent.sh', '/install-agent.ps1'].includes(pathName),
     });
   }
 

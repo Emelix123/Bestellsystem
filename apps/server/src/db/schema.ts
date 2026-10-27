@@ -150,6 +150,7 @@ export const agents = pgTable('agents', {
   name: text('name').notNull(),
   tokenHash: text('token_hash').notNull().unique(),
   hostname: text('hostname'),
+  platform: text('platform'),
   version: text('version'),
   devices: jsonb('devices').$type<AgentDevice[]>().notNull().default([]),
   lastSeenAt: ts('last_seen_at'),

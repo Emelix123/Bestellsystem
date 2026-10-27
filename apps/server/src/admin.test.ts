@@ -162,7 +162,7 @@ describe('Druck-Agent (USB)', () => {
 
   it('bekommt Druckaufträge gepusht und meldet das Ergebnis', async () => {
     const created = (await superadmin.post('/api/admin/agents', { name: 'Raspi Bierstand' })).body;
-    expect(created.token).toBeTruthy();
+    expect(created.token).toMatch(/^agt_/);
     const printer = (
       await superadmin.post('/api/admin/printers', {
         name: 'USB Bier',
@@ -223,5 +223,63 @@ describe('Druck-Agent (USB)', () => {
     await new Promise((r) => setTimeout(r, 100));
     printers = (await superadmin.get<PrinterDto[]>('/api/admin/printers')).body;
     expect(printers.find((p) => p.id === printer.id)!.status).toBe('offline');
+  });
+
+  it('mehrere Rechner an verschiedenen Standorten, auch Windows', async () => {
+    const kitchenPc = (await superadmin.post('/api/admin/agents', { name: 'Windows-PC Küche' })).body;
+    const barPi = (await superadmin.post('/api/admin/agents', { name: 'Raspi Schank' })).body;
+    const winPrinter = (
+      await superadmin.post('/api/admin/printers', {
+        name: 'Küche (Windows)',
+        type: 'usb',
+        agentId: kitchenPc.id,
+        deviceKey: 'win:POS-80',
+      })
+    ).body;
+    const piPrinter = (
+      await superadmin.post('/api/admin/printers', {
+        name: 'Schank (Pi)',
+        type: 'usb',
+        agentId: barPi.id,
+        deviceKey: 'usb:0416:5011:XYZ',
+      })
+    ).body;
+
+    const win = connect(kitchenPc.token);
+    const pi = connect(barPi.token);
+    await nextMessage(win);
+    await nextMessage(pi);
+    pi.send(JSON.stringify({ type: 'hello', version: 't', hostname: 'raspi-schank', platform: 'Linux', devices: [{ key: 'usb:0416:5011:XYZ', path: '/dev/usb/lp0', description: 'POS58' }] }));
+    win.send(
+      JSON.stringify({
+        type: 'hello',
+        version: 't',
+        hostname: 'KUECHE-PC',
+        platform: 'Windows',
+        devices: [{ key: 'win:POS-80', path: 'POS-80', description: 'POS-80 (USB001)', problem: 'Windows meldet den Drucker als offline' }],
+      }),
+    );
+    await new Promise((r) => setTimeout(r, 150));
+
+    const agents = (await superadmin.get<AgentDto[]>('/api/admin/agents')).body;
+    expect(agents.find((a) => a.id === kitchenPc.id)).toMatchObject({ connected: true, platform: 'Windows', hostname: 'KUECHE-PC' });
+    expect(agents.find((a) => a.id === barPi.id)).toMatchObject({ connected: true, platform: 'Linux' });
+    let printers = (await superadmin.get<PrinterDto[]>('/api/admin/printers')).body;
+    expect(printers.find((p) => p.id === winPrinter.id)).toMatchObject({ status: 'error', statusMessage: 'Windows meldet den Drucker als offline' });
+    expect(printers.find((p) => p.id === piPrinter.id)).toMatchObject({ status: 'ok' });
+
+    // Jeder Auftrag geht an den Rechner, an dem sein Drucker hängt.
+    const piJob = nextMessage(pi);
+    await superadmin.post(`/api/admin/printers/${piPrinter.id}/test`);
+    const received = await piJob;
+    expect(received).toMatchObject({ type: 'job', deviceKey: 'usb:0416:5011:XYZ' });
+
+    // Windows meldet den Drucker wieder bereit -> Status grün.
+    win.send(JSON.stringify({ type: 'devices', devices: [{ key: 'win:POS-80', path: 'POS-80', description: 'POS-80 (USB001)', problem: null }] }));
+    await new Promise((r) => setTimeout(r, 150));
+    printers = (await superadmin.get<PrinterDto[]>('/api/admin/printers')).body;
+    expect(printers.find((p) => p.id === winPrinter.id)!.status).toBe('ok');
+    win.close();
+    pi.close();
   });
 });

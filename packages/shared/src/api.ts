@@ -227,10 +227,15 @@ export interface PickupBoard {
 // ---------------------------------------------------------------- Drucker
 
 export interface AgentDevice {
-  /** Stabile Kennung, z. B. "usb:04b8:0e28:SERIAL" – bleibt beim Umstecken gleich. */
+  /**
+   * Stabile Kennung: "usb:04b8:0e28:SERIAL" (Linux, bleibt beim Umstecken gleich),
+   * "win:Druckername" (Windows) oder "file:/pfad" (Test).
+   */
   key: string;
   path: string;
   description: string;
+  /** Problem, das das Betriebssystem meldet (z. B. "offline"); null = in Ordnung. */
+  problem?: string | null;
 }
 
 export interface AgentDto {
@@ -238,6 +243,8 @@ export interface AgentDto {
   name: string;
   connected: boolean;
   hostname: string | null;
+  /** "Linux", "Windows" … */
+  platform: string | null;
   version: string | null;
   lastSeenAt: string | null;
   devices: AgentDevice[];
@@ -326,7 +333,7 @@ export type WsMessage =
 // ---------------------------------------------------------------- Druck-Agent-Protokoll
 
 export type AgentToServer =
-  | { type: 'hello'; version: string; hostname: string; devices: AgentDevice[] }
+  | { type: 'hello'; version: string; hostname: string; platform?: string; devices: AgentDevice[] }
   | { type: 'devices'; devices: AgentDevice[] }
   | { type: 'result'; jobId: number; ok: boolean; error?: string }
   /** Der Schreibvorgang hängt (Drucker aus / Papier leer). Ergebnis folgt später. */

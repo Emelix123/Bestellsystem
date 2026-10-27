@@ -6,6 +6,8 @@ export interface AgentOptions {
   token: string;
   version: string;
   hostname: string;
+  /** "Linux", "Windows" … – wird im Admin-Bereich angezeigt. */
+  platform?: string;
   discover(): Promise<AgentDevice[]>;
   write(device: AgentDevice, data: Buffer): Promise<void>;
   log(message: string): void;
@@ -94,7 +96,13 @@ export class PrintAgent {
       this.reconnectDelay = 1000;
       this.lastPing = Date.now();
       this.opts.log(`Verbunden mit ${url}`);
-      this.send({ type: 'hello', version: this.opts.version, hostname: this.opts.hostname, devices: this.devices });
+      this.send({
+        type: 'hello',
+        version: this.opts.version,
+        hostname: this.opts.hostname,
+        platform: this.opts.platform,
+        devices: this.devices,
+      });
     });
     ws.on('ping', () => (this.lastPing = Date.now()));
     ws.on('message', (raw) => {
@@ -130,7 +138,9 @@ export class PrintAgent {
         this.devices = found;
         this.devicesSignature = signature;
         this.opts.log(
-          found.length ? `Drucker gefunden: ${found.map((d) => d.description).join('; ')}` : 'Keine USB-Drucker gefunden',
+          found.length
+            ? `Drucker: ${found.map((d) => d.description + (d.problem ? ` – ${d.problem}` : '')).join('; ')}`
+            : 'Keine Drucker gefunden',
         );
         if (report) this.send({ type: 'devices', devices: found });
       }
