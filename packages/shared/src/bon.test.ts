@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bonToPlainText, buildTicketBon, layoutBon } from './bon';
+import { bonToPlainText, buildCodepageTestBon, buildTicketBon, layoutBon } from './bon';
 import { encodeText, normalizeText } from './codepage';
 import { renderEscPos } from './escpos';
 import { formatEuro, parseEuro } from './money';
@@ -94,6 +94,28 @@ describe('ESC/POS', () => {
     );
     const start = bytes.indexOf(0x20);
     expect(bytes.slice(start, start + 7)).toEqual([0x20, 0x20, 0x20, 0x20, 0x1d, 0x42, 0x01]);
+  });
+});
+
+describe('Zeichensatz-Test', () => {
+  it('druckt jede Zeile in ihrem eigenen Zeichensatz', () => {
+    const bytes = Buffer.from(
+      renderEscPos(buildCodepageTestBon('Küche'), { widthChars: 48, codepage: 'cp858', cut: true }),
+    );
+    // Wechsel auf PC437 (0), PC850 (2), PC858 (19) und Windows-1252 (16)
+    for (const table of [0, 2, 19, 16]) expect(bytes.includes(Buffer.from([0x1b, 0x74, table]))).toBe(true);
+    // "Ü" einmal als PC437/850/858-Byte 0x9A, einmal als Windows-1252-Byte 0xDC
+    expect(bytes.includes(Buffer.from([0x8e, 0x99, 0x9a]))).toBe(true);
+    expect(bytes.includes(Buffer.from([0xc4, 0xd6, 0xdc]))).toBe(true);
+    const text = bonToPlainText(buildCodepageTestBon('Küche'), { widthChars: 48, codepage: 'cp858' });
+    expect(text).toContain('ZEICHENSATZ-TEST');
+    expect(text).toContain('Kueche'); // Kopf in reinem ASCII
+    expect(text).toContain('Nur ASCII:\nKueche Getraenke');
+  });
+
+  it('griechisch gelesenes PC858 erklärt "KYCHE"', () => {
+    // Fehlerbild aus dem Praxistest: Drucker legt ESC t 19 als griechische Tabelle aus.
+    expect(Buffer.from(encodeText('KÜCHE GETRÄNKE', 'cp858')).toString('latin1')).toBe('K\x9aCHE GETR\x8eNKE');
   });
 });
 

@@ -20,6 +20,10 @@ const printers = JSON.parse(process.env.FAKE_PRINTERS || '[]');
 readline.createInterface({ input: process.stdin }).on('line', (line) => {
   const req = JSON.parse(line);
   if (req.cmd === 'list') return reply({ id: req.id, ok: true, printers: process.env.FAKE_SINGLE ? printers[0] : printers });
+  if (req.cmd === 'keepAwake') {
+    fs.appendFileSync(out, JSON.stringify({ keepAwake: true }) + '\\n');
+    return reply({ id: req.id, ok: true });
+  }
   if (req.cmd === 'print') {
     if (req.printer === 'Absturz') process.exit(3);
     if (req.printer === 'Haenger') return;
@@ -45,6 +49,7 @@ const base: WindowsPrinter = {
 const PRINTERS: WindowsPrinter[] = [
   base,
   { ...base, name: 'Küche', port: 'USB002', offline: true },
+  { ...base, name: 'Bier', port: 'USB003', jobs: 3, oldestJobSeconds: 60 },
   { ...base, name: 'Microsoft Print to PDF', port: 'PORTPROMPT:', driver: 'Microsoft Print To PDF' },
 ];
 
@@ -93,6 +98,12 @@ describe('Windows-Druck (simulierter Hilfsprozess)', () => {
         description: 'Küche (USB002, POS-80C Printer)',
         problem: expect.stringContaining('offline'),
       },
+      {
+        key: 'win:Bier',
+        path: 'Bier',
+        description: 'Bier (USB003, POS-80C Printer)',
+        problem: expect.stringContaining('hängt (3 Aufträge)'),
+      },
     ]);
   });
 
@@ -114,14 +125,35 @@ describe('Windows-Druck (simulierter Hilfsprozess)', () => {
     expect(Buffer.from(job.bytes, 'base64')).toEqual(data);
   });
 
-  it('nimmt keine Aufträge für Drucker an, die Windows als offline meldet', async () => {
+  it('druckt auch, wenn Windows "offline" meldet – der Drucker wacht erst durch Daten auf', async () => {
     const { spooler, printed } = createSpooler();
     const backend = windowsBackend({ spooler });
     await backend.discover();
-    await expect(
-      backend.write({ key: 'win:Küche', path: 'Küche', description: '' }, Buffer.from('x')),
-    ).rejects.toThrow(/offline/);
+    await backend.write({ key: 'win:Küche', path: 'Küche', description: '' }, Buffer.from('wach auf'));
+    expect(printed().map((j) => j.printer)).toEqual(['Küche']);
+  });
+
+  it('hält Aufträge zurück, solange die Windows-Warteschlange hängt', async () => {
+    const { spooler, printed } = createSpooler();
+    const backend = windowsBackend({ spooler });
+    await backend.discover();
+    await expect(backend.write({ key: 'win:Bier', path: 'Bier', description: '' }, Buffer.from('x'))).rejects.toThrow(
+      /warteschlange hängt/i,
+    );
     expect(printed()).toEqual([]);
+  });
+
+  it('listet Drucker in einem eigenen Prozess und hält den PC wach', async () => {
+    const { spooler, printed } = createSpooler();
+    const lister = new WindowsSpooler({ command: process.execPath, args: [script] });
+    try {
+      const backend = windowsBackend({ spooler, lister, keepAwake: true });
+      expect((await backend.discover()).length).toBe(3);
+      await new Promise((r) => setTimeout(r, 100));
+      expect(printed()).toEqual([{ keepAwake: true }]);
+    } finally {
+      lister.close();
+    }
   });
 
   it('meldet Fehler der Druckerwarteschlange weiter', async () => {
@@ -149,7 +181,8 @@ describe('Windows-Druck (simulierter Hilfsprozess)', () => {
       blocking: true,
       message: expect.stringContaining('hängt (2 Aufträge)'),
     });
-    expect(printerProblem({ ...base, errorState: 4 })?.message).toContain('Kein Papier');
+    expect(printerProblem({ ...base, errorState: 4 })).toMatchObject({ blocking: false, message: expect.stringContaining('Kein Papier') });
+    expect(printerProblem({ ...base, offline: true })?.blocking).toBe(false);
   });
 
   it('PowerShell-Skript ist vollständig eingebettet', () => {

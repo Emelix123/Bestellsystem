@@ -15,6 +15,13 @@ const STATUS = {
   cancelled: { label: 'verworfen', tone: 'slate' },
 } as const;
 
+/** Wie lange ein Auftrag bis zum Drucker gebraucht hat – macht Verzögerungen sichtbar. */
+function Delay({ from, to }: { from: string; to: string }) {
+  const seconds = (new Date(to).getTime() - new Date(from).getTime()) / 1000;
+  const text = seconds < 1 ? 'sofort' : `nach ${seconds < 10 ? seconds.toFixed(1).replace('.', ',') : Math.round(seconds)} s`;
+  return <Badge tone={seconds >= 5 ? 'amber' : 'slate'}>{text}</Badge>;
+}
+
 export function PrintJobsPage() {
   const toast = useToast();
   const [printerId, setPrinterId] = useState('');
@@ -71,6 +78,7 @@ export function PrintJobsPage() {
                 <Badge>{PRINT_JOB_KIND_LABELS[job.kind]}</Badge>
                 <Badge tone={STATUS[job.status].tone}>{STATUS[job.status].label}</Badge>
                 <span className="text-slate-500">{timeOf(job.createdAt)}</span>
+                {job.printedAt && <Delay from={job.createdAt} to={job.printedAt} />}
               </div>
               {job.lastError && job.status !== 'done' && (
                 <div className="max-w-xs text-xs font-medium text-red-700">

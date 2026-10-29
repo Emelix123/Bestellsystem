@@ -24,14 +24,14 @@ export const PRINTER_TYPE_LABELS: Record<PrinterType, string> = {
   simulator: 'Simulator (nur Vorschau)',
 };
 
-export const CODEPAGES = ['cp858', 'cp850', 'cp437', 'cp1252', 'ascii'] as const;
+export const CODEPAGES = ['cp437', 'cp850', 'cp858', 'cp1252', 'ascii'] as const;
 export type Codepage = (typeof CODEPAGES)[number];
 export const CODEPAGE_LABELS: Record<Codepage, string> = {
-  cp858: 'PC858 (Umlaute + €, Empfehlung)',
-  cp850: 'PC850 (Umlaute, ohne €)',
-  cp437: 'PC437 (Umlaute, ohne €)',
+  cp437: 'PC437 – Standard, klappt bei fast allen Druckern',
+  cp850: 'PC850',
+  cp858: 'PC858 (mit €, bei vielen Nachbauten falsche Zeichen)',
   cp1252: 'Windows-1252',
-  ascii: 'Nur ASCII (ae/oe/ue)',
+  ascii: 'Nur ASCII (ae/oe/ue) – wenn nichts anderes klappt',
 };
 
 export type PrinterStatus = 'ok' | 'error' | 'offline' | 'unknown';

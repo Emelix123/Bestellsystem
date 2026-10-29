@@ -5,7 +5,7 @@ import { linuxBackend, windowsBackend, type PrinterBackend } from './backends';
 import { createLogger, loadConfig } from './config';
 import { WindowsSpooler } from './windows';
 
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 const isWindows = process.platform === 'win32';
 
 function usage() {
@@ -35,7 +35,16 @@ function arg(name: string): string | undefined {
 }
 
 function createBackend(extra: string | undefined, log: (m: string) => void): PrinterBackend {
-  if (isWindows) return windowsBackend({ extra, spooler: new WindowsSpooler({ log }) });
+  if (isWindows) {
+    return windowsBackend({
+      extra,
+      spooler: new WindowsSpooler({ log }),
+      lister: new WindowsSpooler({ log }),
+      // Nur im Dienstbetrieb wach halten, nicht bei --list/--test.
+      keepAwake: !process.argv.includes('--list') && !process.argv.includes('--test'),
+      log,
+    });
+  }
   return linuxBackend({ extra, sysRoot: process.env.SYSFS_ROOT, devRoot: process.env.DEV_ROOT });
 }
 

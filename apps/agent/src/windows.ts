@@ -44,6 +44,12 @@ public static class BestellRawPrinter {
 
   static Exception Fail() { return new Win32Exception(Marshal.GetLastWin32Error()); }
 
+  [DllImport("kernel32.dll")]
+  static extern uint SetThreadExecutionState(uint flags);
+
+  // ES_CONTINUOUS | ES_SYSTEM_REQUIRED: kein automatischer Standby, solange der Agent läuft.
+  public static void KeepAwake() { SetThreadExecutionState(0x80000001); }
+
   public static void Send(string printer, byte[] data, string docName) {
     IntPtr handle;
     if (!OpenPrinter(printer, out handle, IntPtr.Zero)) throw Fail();
@@ -91,7 +97,8 @@ while ($true) {
       $jobs = @(Get-CimInstance Win32_PrintJob -ErrorAction SilentlyContinue)
       $printers = @(Get-CimInstance Win32_Printer | ForEach-Object {
         $name = $_.Name
-        $mine = @($jobs | Where-Object { ($_.Name -split ',')[0] -eq $name })
+        # Gedruckte, gelöschte und abgeschlossene Aufträge (z. B. "Nach dem Drucken behalten") zählen nicht.
+        $mine = @($jobs | Where-Object { ($_.Name -split ',')[0] -eq $name -and ([int64]$_.StatusMask -band 0x1180) -eq 0 })
         $oldest = 0
         foreach ($j in $mine) {
           if ($j.TimeSubmitted) {
@@ -111,6 +118,9 @@ while ($true) {
         }
       })
       Write-Answer @{ id = $id; ok = $true; printers = $printers }
+    } elseif ($req.cmd -eq 'keepAwake') {
+      [BestellRawPrinter]::KeepAwake()
+      Write-Answer @{ id = $id; ok = $true }
     } elseif ($req.cmd -eq 'print') {
       [BestellRawPrinter]::Send([string]$req.printer, [Convert]::FromBase64String([string]$req.data), [string]$req.doc)
       Write-Answer @{ id = $id; ok = $true }
@@ -257,6 +267,11 @@ export class WindowsSpooler {
     return (Array.isArray(printers) ? printers : [printers]) as WindowsPrinter[];
   }
 
+  /** Verhindert den automatischen Standby von Windows, solange dieser Prozess läuft. */
+  async keepAwake(): Promise<void> {
+    await this.request({ cmd: 'keepAwake' });
+  }
+
   async print(printer: string, data: Buffer, docName: string): Promise<void> {
     await this.request({ cmd: 'print', printer, data: data.toString('base64'), doc: docName });
   }
@@ -280,7 +295,6 @@ const ERROR_STATES: Record<number, string> = {
   4: 'Kein Papier',
   7: 'Deckel offen',
   8: 'Papierstau',
-  9: 'Drucker offline',
   10: 'Wartung erforderlich',
 };
 
@@ -288,22 +302,25 @@ const ERROR_STATES: Record<number, string> = {
 export const STUCK_QUEUE_SECONDS = 20;
 
 /**
- * Was Windows über den Drucker meldet. Ein schwerwiegendes Problem (offline,
- * hängende Warteschlange) führt dazu, dass der Agent keine weiteren Aufträge
- * annimmt – sie bleiben dann sichtbar in der Warteschlange des Servers statt
- * unbemerkt in der von Windows zu verschwinden.
+ * Was Windows über den Drucker meldet.
+ *
+ * Nur eine wirklich hängende Windows-Warteschlange blockiert weitere Aufträge –
+ * sie bleiben dann sichtbar auf dem Server statt unbemerkt bei Windows liegen.
+ * "Offline" und Fehlerzustände sind dagegen nur Hinweise: Windows meldet viele
+ * USB-Bondrucker im Energiesparmodus als offline, und sie wachen erst auf, wenn
+ * Daten kommen. Würde der Agent dann nichts schicken, schliefe der Drucker weiter.
  */
 export function printerProblem(p: WindowsPrinter): { message: string; blocking: boolean } | null {
-  if (p.offline || p.status === 7 || p.errorState === 9) {
-    return { message: 'Windows meldet den Drucker als offline – USB-Kabel und Strom prüfen', blocking: true };
-  }
-  const state = ERROR_STATES[p.errorState];
-  if (state) return { message: `Windows meldet: ${state}`, blocking: true };
   if (p.jobs > 0 && p.oldestJobSeconds >= STUCK_QUEUE_SECONDS) {
     return {
       message: `Windows-Druckerwarteschlange hängt (${p.jobs} ${p.jobs === 1 ? 'Auftrag' : 'Aufträge'}) – Drucker prüfen`,
       blocking: true,
     };
+  }
+  const state = ERROR_STATES[p.errorState];
+  if (state) return { message: `Windows meldet: ${state}`, blocking: false };
+  if (p.offline || p.status === 7 || p.errorState === 9) {
+    return { message: 'Windows meldet den Drucker als offline – falls nichts gedruckt wird: USB-Kabel und Strom prüfen', blocking: false };
   }
   return null;
 }

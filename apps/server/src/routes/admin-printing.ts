@@ -1,4 +1,5 @@
 import {
+  buildCodepageTestBon,
   buildTestBon,
   CODEPAGES,
   PRINT_TRIGGERS,
@@ -91,7 +92,7 @@ const printerSchema = z.object({
   host: z.string().trim().max(200).nullable().optional(),
   port: z.number().int().min(1).max(65535).default(9100),
   widthChars: z.number().int().min(16).max(80).default(48),
-  codepage: z.enum(CODEPAGES).default('cp858'),
+  codepage: z.enum(CODEPAGES).default('cp437'),
   cut: z.boolean().default(true),
 });
 
@@ -241,6 +242,21 @@ export function registerAdminPrintingRoutes(app: FastifyInstance, ctx: AppContex
         profile: { widthChars: printer.widthChars, codepage: printer.codepage },
         time: ctx.formatTime(new Date()),
       }),
+    });
+    ctx.printing.kick();
+    return { jobId };
+  });
+
+  /** Umlaute falsch? Druckt eine Zeile pro Zeichensatz – die richtige wird ausgewählt. */
+  app.post('/api/admin/printers/:id/codepage-test', async (req) => {
+    const { tenantId } = requireTenant(req, 'admin');
+    const { id } = parse(idParam, req.params);
+    const printer = await ownedPrinter(ctx.db, tenantId, id);
+    const jobId = await ctx.printing.enqueue(ctx.db, {
+      tenantId,
+      printerId: id,
+      kind: 'test',
+      doc: buildCodepageTestBon(printer.name),
     });
     ctx.printing.kick();
     return { jobId };
