@@ -134,6 +134,14 @@ Danach erscheint der Agent im Admin als **verbunden** (Badge „Windows“). Bei
 
 **Fehlersuche unter Windows** (PowerShell):
 
+- **Fehlermeldungen mit `<!doctype html>` oder „Die Benennung "<" wurde nicht …
+  erkannt“:** Der Server hat statt des Skripts die Webseite geschickt, weil ihm die
+  Dateien des Druck-Agenten fehlen. Auf dem **Server** den aktuellen Stand bauen und
+  neu starten: mit Docker `git pull` und `docker compose up -d --build`, ohne Docker
+  `git pull`, `npm install`, `npm run build` und den Server neu starten. Prüfen: Im
+  Browser `http://<Server>:8080/downloads/install-agent.ps1` öffnen – es muss Text
+  erscheinen, der mit „# Installiert den Druck-Agenten“ beginnt.
+
 ```powershell
 Get-Content C:\ProgramData\Bestellsystem-Agent\agent.log -Tail 30 -Wait   # Protokoll
 node C:\ProgramData\Bestellsystem-Agent\agent.mjs --list                  # welche Drucker sieht der Agent?

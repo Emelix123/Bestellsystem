@@ -61,6 +61,9 @@ if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
 
 Write-Host "Lade Agent von $ServerUrl ..."
 Invoke-WebRequest -UseBasicParsing -Uri "$ServerUrl/downloads/agent.mjs" -OutFile $agentFile
+if ((Get-Content -Path $agentFile -TotalCount 1) -match '^\s*<') {
+  throw "Der Server hat statt des Agenten eine Webseite geschickt. Bitte auf dem Server 'npm run build' ausfuehren bzw. 'docker compose up -d --build' und neu starten."
+}
 
 $config = [ordered]@{ serverUrl = $ServerUrl; token = $Token; logFile = $logFile } | ConvertTo-Json
 [IO.File]::WriteAllText($configFile, $config, (New-Object Text.UTF8Encoding($false)))

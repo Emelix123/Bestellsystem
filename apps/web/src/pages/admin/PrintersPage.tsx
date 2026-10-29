@@ -235,7 +235,7 @@ export function PrintersPage() {
             <div>
               <div className="mb-1 font-semibold">Windows 10/11 (PowerShell „Als Administrator ausführen“)</div>
               <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-xl bg-slate-900 p-4 text-xs text-emerald-300">
-                {`iwr -UseBasicParsing ${origin}/downloads/install-agent.ps1 -OutFile $env:TEMP\\install-agent.ps1; powershell -ExecutionPolicy Bypass -File $env:TEMP\\install-agent.ps1 -ServerUrl '${origin}' -Token '${token.token}'`}
+                {`iwr -UseBasicParsing ${origin}/downloads/install-agent.ps1 -OutFile $env:TEMP\\install-agent.ps1; if ($?) { powershell -ExecutionPolicy Bypass -File $env:TEMP\\install-agent.ps1 -ServerUrl '${origin}' -Token '${token.token}' }`}
               </pre>
               <p className="mt-1 text-xs text-slate-600">
                 Unter Windows muss der Drucker vorher installiert sein (Einstellungen → Bluetooth und Geräte → Drucker), mit

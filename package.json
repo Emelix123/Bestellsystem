@@ -7,7 +7,7 @@
     "apps/*"
   ],
   "scripts": {
-    "dev:server": "npm -w @bestellsystem/server run dev",
+    "dev:server": "npm -w @bestellsystem/agent run build && npm -w @bestellsystem/server run dev",
     "dev:web": "npm -w @bestellsystem/web run dev",
     "build": "npm -w @bestellsystem/web run build && npm -w @bestellsystem/server run build && npm -w @bestellsystem/agent run build",
     "typecheck": "tsc -p packages/shared && tsc -p apps/server && tsc -p apps/web && tsc -p apps/agent",
