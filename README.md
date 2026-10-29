@@ -21,9 +21,10 @@ Warteschlange auf einem Tablet. Läuft komplett lokal, ohne Internet.
   Durchlaufzeit der Küche; Export als Excel und CSV.
 - **Mehrere Vereine (Mandanten):** vollständig getrennte Daten und Einstellungen auf
   einer Installation.
-- **Drucker:** USB-Bondrucker über einen kleinen **Druck-Agenten** (z. B. Raspberry Pi
-  neben dem Drucker), außerdem Netzwerk-Drucker (TCP 9100) und ein **Simulator**, der
-  Bons im Browser zeigt.
+- **Drucker:** USB-Bondrucker an beliebig vielen Rechnern an verschiedenen Standorten
+  im selben Netz. Auf jedem Rechner läuft ein **Druck-Agent**: Raspberry Pi, Linux-PC
+  oder **Windows-PC**. Außerdem gibt es Netzwerk-Drucker (TCP 9100) und einen
+  **Simulator**, der Bons im Browser zeigt.
 
 ## Schnellstart
 
@@ -40,18 +41,21 @@ Dann im Browser `http://<IP-des-Rechners>:8080` öffnen. Bei der Ersteinrichtung
 kann man **Beispieldaten** anlegen lassen: ein Demo-Fest mit Simulator-Druckern und
 den PINs `1111`/`2222` (Bedienung), `3333` (Küche) und `4444` (To-Go).
 
-Für USB-Drucker im Admin-Bereich unter **Drucker → Neuer Druck-Agent** einen Agent
-anlegen und den angezeigten Befehl auf dem Raspberry Pi am Drucker ausführen.
-Details stehen in [docs/BETRIEB.md](docs/BETRIEB.md).
+Für USB-Drucker legt man im Admin-Bereich unter **Drucker → Neuer Druck-Agent** pro
+Rechner einen Agenten an. Dann den angezeigten Befehl auf dem Rechner am Drucker
+ausführen: im Terminal (Raspberry Pi/Linux) oder in der PowerShell als Administrator
+(Windows). Details stehen in [docs/BETRIEB.md](docs/BETRIEB.md).
 
 ## Aufbau
 
 ```
  Handys / Tablets / Admin  ──HTTP + WebSocket──▶  app (Server + Weboberfläche)  ──▶  db (PostgreSQL)
                                                       │
-                                    WebSocket (Agent verbindet sich selbst)
-                                                      ▼
-                                   Druck-Agent (Raspberry Pi)  ──USB──▶  Bondrucker
+                                    WebSocket (jeder Agent verbindet sich selbst)
+                       ┌──────────────────────────────┼──────────────────────────────┐
+                       ▼                              ▼                              ▼
+          Raspberry Pi „Schank“           Windows-PC „Küche“             Raspberry Pi „Bier“
+             └─USB─ Bondrucker               └─USB─ Bondrucker              └─USB─ Bondrucker
 ```
 
 | Container     | Aufgabe                                                                   |
@@ -81,7 +85,7 @@ npm run build
 | `packages/shared` | Typen, Bon-Layout, ESC/POS-Encoder, Codetabellen         |
 | `apps/server`     | Fastify-Server, Drizzle-Schema und Migrationen           |
 | `apps/web`        | React-Oberfläche (Bedienung, Station, To-Go, Admin)      |
-| `apps/agent`      | Druck-Agent für USB-Drucker (eine Datei, Node.js ≥ 18)   |
+| `apps/agent`      | Druck-Agent für USB-Drucker unter Linux und Windows (eine Datei, Node.js ≥ 18) |
 
 Schemaänderungen: `apps/server/src/db/schema.ts` anpassen, dann `npm run db:generate`.
 Die Migration wird beim Start automatisch ausgeführt.

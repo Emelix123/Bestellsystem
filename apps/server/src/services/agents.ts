@@ -109,7 +109,13 @@ export class AgentHub {
         conn.devices = msg.devices ?? [];
         await this.db
           .update(agents)
-          .set({ hostname: msg.hostname, version: msg.version, devices: conn.devices, lastSeenAt: new Date() })
+          .set({
+            hostname: msg.hostname,
+            version: msg.version,
+            platform: msg.platform ?? null,
+            devices: conn.devices,
+            lastSeenAt: new Date(),
+          })
           .where(eq(agents.id, conn.agentId));
         this.events?.onDevices(conn.agentId, conn.tenantId);
         break;

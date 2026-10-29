@@ -304,9 +304,11 @@ export class PrintService {
     const devices = this.agentHub.devices(agentId) ?? [];
     for (const printer of rows) {
       if (printer.type !== 'usb') continue;
-      if (!printer.deviceKey) await this.setPrinterStatus(printer, 'error', 'Kein USB-Gerät ausgewählt');
-      else if (!devices.some((d) => d.key === printer.deviceKey))
-        await this.setPrinterStatus(printer, 'error', 'USB-Drucker am Agent nicht gefunden (Kabel/Strom?)');
+      const device = printer.deviceKey ? devices.find((d) => d.key === printer.deviceKey) : undefined;
+      if (!printer.deviceKey) await this.setPrinterStatus(printer, 'error', 'Kein Drucker am Agent ausgewählt');
+      else if (!device) await this.setPrinterStatus(printer, 'error', 'Drucker am Agent nicht gefunden (Kabel/Strom?)');
+      // Vom Betriebssystem gemeldetes Problem (z. B. Windows: offline, Warteschlange hängt).
+      else if (device.problem) await this.setPrinterStatus(printer, 'error', device.problem);
       else await this.setPrinterStatus(printer, 'ok', null);
     }
     this.hub.broadcast(tenantId, { type: 'agent', agentId, connected: true });

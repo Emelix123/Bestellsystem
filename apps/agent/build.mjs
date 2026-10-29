@@ -13,3 +13,4 @@ await build({
   logLevel: 'info',
 });
 fs.copyFileSync('install-agent.sh', 'dist/install-agent.sh');
+fs.copyFileSync('install-agent.ps1', 'dist/install-agent.ps1');

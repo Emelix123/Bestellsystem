@@ -120,9 +120,9 @@ export function PrintersPage() {
                   {p.pendingJobs > 0 && <Badge tone="amber">{p.pendingJobs} wartend</Badge>}
                 </div>
                 <div className="text-sm text-slate-600">
-                  {PRINTER_TYPE_LABELS[p.type]}
-                  {p.type === 'usb' && ` · ${agentFor(p.agentId)?.name ?? 'kein Agent'}`}
-                  {p.type === 'network' && ` · ${p.host}:${p.port}`} · {p.widthChars} Zeichen
+                  {p.type === 'usb' && `Druck-Agent „${agentFor(p.agentId)?.name ?? '–'}“`}
+                  {p.type === 'network' && `Netzwerk ${p.host}:${p.port}`}
+                  {p.type === 'simulator' && 'Simulator'} · {p.widthChars} Zeichen
                 </div>
                 {p.statusMessage && <div className="text-sm font-medium text-red-700">{p.statusMessage}</div>}
               </div>
@@ -164,8 +164,9 @@ export function PrintersPage() {
           </Button>
         </PageTitle>
         <p className="mb-4 text-sm text-slate-600">
-          USB-Drucker hängen an einem kleinen Rechner (z. B. Raspberry Pi) direkt neben dem Drucker. Darauf läuft der
-          Druck-Agent, der sich mit diesem Server verbindet. Ein Agent kann mehrere USB-Drucker bedienen.
+          Jeder Rechner, an dem direkt ein Drucker hängt – Raspberry Pi, Linux-PC oder Windows-PC – bekommt einen eigenen
+          Druck-Agenten. Die Rechner können an verschiedenen Stellen stehen (Küche, Schank, Bierstand), sie müssen nur im
+          selben Netz sein. Ein Agent kann mehrere Drucker bedienen.
         </p>
         <div className="space-y-3">
           {agents.data.map((a) => (
@@ -175,6 +176,7 @@ export function PrintersPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-semibold">{a.name}</span>
                     <Badge tone={a.connected ? 'green' : 'red'}>{a.connected ? 'verbunden' : 'nicht verbunden'}</Badge>
+                    {a.platform && <Badge>{a.platform}</Badge>}
                   </div>
                   <div className="text-sm text-slate-600">
                     {a.hostname ? `Rechner: ${a.hostname}` : 'hat sich noch nie verbunden'}
@@ -204,7 +206,10 @@ export function PrintersPage() {
               {a.devices.length > 0 && (
                 <ul className="mt-2 space-y-1 text-sm text-slate-600">
                   {a.devices.map((d) => (
-                    <li key={d.key}>🖨 {d.description}</li>
+                    <li key={d.key}>
+                      🖨 {d.description}
+                      {d.problem && <span className="ml-2 font-medium text-red-700">– {d.problem}</span>}
+                    </li>
                   ))}
                 </ul>
               )}
@@ -218,15 +223,28 @@ export function PrintersPage() {
         {token && (
           <div className="space-y-4 text-sm">
             <p>
-              Der Token wird <strong>nur jetzt</strong> angezeigt. Auf dem Raspberry Pi (Raspberry Pi OS / Debian) diesen
-              Befehl ausführen – er installiert den Agenten als Dienst, der beim Booten startet:
+              Der Token wird <strong>nur jetzt</strong> angezeigt. Den passenden Befehl auf dem Rechner ausführen, an dem
+              der Drucker hängt. Er installiert den Agenten als Dienst, der beim Hochfahren automatisch startet.
             </p>
-            <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-xl bg-slate-900 p-4 text-xs text-emerald-300">
-              {`curl -fsSL ${origin}/downloads/install-agent.sh | sudo bash -s -- ${origin} ${token.token}`}
-            </pre>
+            <div>
+              <div className="mb-1 font-semibold">Raspberry Pi / Linux (Terminal)</div>
+              <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-xl bg-slate-900 p-4 text-xs text-emerald-300">
+                {`curl -fsSL ${origin}/downloads/install-agent.sh | sudo bash -s -- '${origin}' '${token.token}'`}
+              </pre>
+            </div>
+            <div>
+              <div className="mb-1 font-semibold">Windows 10/11 (PowerShell „Als Administrator ausführen“)</div>
+              <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-xl bg-slate-900 p-4 text-xs text-emerald-300">
+                {`iwr -UseBasicParsing ${origin}/downloads/install-agent.ps1 -OutFile $env:TEMP\\install-agent.ps1; if ($?) { powershell -ExecutionPolicy Bypass -File $env:TEMP\\install-agent.ps1 -ServerUrl '${origin}' -Token '${token.token}' }`}
+              </pre>
+              <p className="mt-1 text-xs text-slate-600">
+                Unter Windows muss der Drucker vorher installiert sein (Einstellungen → Bluetooth und Geräte → Drucker), mit
+                Herstellertreiber oder „Generic / Text Only“.
+              </p>
+            </div>
             <p className="text-slate-600">
-              Danach den USB-Drucker einstecken. Er erscheint hier unter dem Agenten und kann beim Drucker ausgewählt werden.
-              Alternativ mit Docker: siehe <code>docs/BETRIEB.md</code>.
+              Danach erscheint der Agent hier als verbunden, mit seinen Druckern. Beim Drucker dann Agent und Gerät
+              auswählen und einen Testdruck machen. Weitere Varianten (Docker) stehen in <code>docs/BETRIEB.md</code>.
             </p>
             <Field label="Token">
               <Input readOnly value={token.token} onFocus={(e) => e.target.select()} />
@@ -337,8 +355,8 @@ export function PrintersPage() {
                   </Select>
                 </Field>
                 <Field
-                  label="USB-Drucker am Agent"
-                  hint="Die Kennung bleibt gleich, auch wenn der Drucker an einen anderen USB-Port gesteckt wird (sofern er eine Seriennummer hat)."
+                  label="Drucker am Agent"
+                  hint="Linux: Die Kennung bleibt beim Umstecken gleich, sofern der Drucker eine Seriennummer hat. Windows: Drucker werden über ihren Namen in Windows zugeordnet."
                 >
                   <Select value={draft.deviceKey ?? ''} onChange={(e) => setDraft({ ...draft, deviceKey: e.target.value || null })}>
                     <option value="">– wählen –</option>

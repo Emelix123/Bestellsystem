@@ -19,7 +19,7 @@ export const PRINT_TRIGGER_LABELS: Record<PrintTrigger, string> = {
 export const PRINTER_TYPES = ['usb', 'network', 'simulator'] as const;
 export type PrinterType = (typeof PRINTER_TYPES)[number];
 export const PRINTER_TYPE_LABELS: Record<PrinterType, string> = {
-  usb: 'USB (über Druck-Agent)',
+  usb: 'Am Rechner angeschlossen (Druck-Agent: Raspberry Pi / Linux / Windows)',
   network: 'Netzwerk (TCP 9100)',
   simulator: 'Simulator (nur Vorschau)',
 };
