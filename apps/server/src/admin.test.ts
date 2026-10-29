@@ -282,4 +282,35 @@ describe('Druck-Agent (USB)', () => {
     win.close();
     pi.close();
   });
+
+  it('ein Rechner mit mehreren Druckern', async () => {
+    const pc = (await superadmin.post('/api/admin/agents', { name: 'PC Schank' })).body;
+    const devices = [
+      { key: 'win:Bon-Getraenke', path: 'Bon-Getraenke', description: 'Bon-Getraenke (USB001)' },
+      { key: 'win:Bon-Bier', path: 'Bon-Bier', description: 'Bon-Bier (USB002)' },
+    ];
+    const drinks = (
+      await superadmin.post('/api/admin/printers', { name: 'Getränke', type: 'usb', agentId: pc.id, deviceKey: devices[0].key })
+    ).body;
+    const beer = (
+      await superadmin.post('/api/admin/printers', { name: 'Bier', type: 'usb', agentId: pc.id, deviceKey: devices[1].key })
+    ).body;
+    const ws = connect(pc.token);
+    await nextMessage(ws);
+    const jobs: ServerToAgent[] = [];
+    ws.on('message', (raw) => jobs.push(JSON.parse(raw.toString())));
+    ws.send(JSON.stringify({ type: 'hello', version: 't', hostname: 'SCHANK-PC', platform: 'Windows', devices }));
+    await new Promise((r) => setTimeout(r, 100));
+    await superadmin.post(`/api/admin/printers/${drinks.id}/test`);
+    await superadmin.post(`/api/admin/printers/${beer.id}/test`);
+    await new Promise((r) => setTimeout(r, 300));
+    // Beide Drucker bekommen ihren Auftrag, ohne aufeinander zu warten.
+    expect(jobs.filter((j) => j.type === 'job').map((j) => j.type === 'job' && j.deviceKey).sort()).toEqual([
+      'win:Bon-Bier',
+      'win:Bon-Getraenke',
+    ]);
+    const printers = (await superadmin.get<PrinterDto[]>('/api/admin/printers')).body;
+    expect(printers.filter((p) => p.agentId === pc.id).map((p) => p.status)).toEqual(['ok', 'ok']);
+    ws.close();
+  });
 });
