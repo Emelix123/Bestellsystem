@@ -102,7 +102,7 @@ export function PrintersPage() {
                 host: '',
                 port: 9100,
                 widthChars: 48,
-                codepage: 'cp858',
+                codepage: 'cp437',
                 cut: true,
               });
             }}
@@ -128,6 +128,13 @@ export function PrintersPage() {
               </div>
               <Button size="sm" variant="secondary" onClick={() => run(() => api.post(`/api/admin/printers/${p.id}/test`), 'Testdruck gesendet')}>
                 Testdruck
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => run(() => api.post(`/api/admin/printers/${p.id}/codepage-test`), 'Zeichensatz-Test gesendet')}
+              >
+                Zeichensatz-Test
               </Button>
               <Button size="sm" variant="secondary" onClick={() => setRedirect({ from: p, to: null, switchStations: true })}>
                 Umleiten
@@ -394,7 +401,10 @@ export function PrintersPage() {
                 {!WIDTHS.some((w) => w.value === draft.widthChars) && <option value={draft.widthChars}>{draft.widthChars} Zeichen</option>}
               </Select>
             </Field>
-            <Field label="Zeichensatz" hint="Wenn Umlaute falsch gedruckt werden, PC437 oder „Nur ASCII“ probieren (Testdruck).">
+            <Field
+              label="Zeichensatz"
+              hint="Umlaute falsch (z. B. „KYCHE“ statt „KÜCHE“)? Beim Drucker „Zeichensatz-Test“ drucken und den Zeichensatz der richtigen Zeile wählen."
+            >
               <Select value={draft.codepage} onChange={(e) => setDraft({ ...draft, codepage: e.target.value as Codepage })}>
                 {CODEPAGES.map((c) => (
                   <option key={c} value={c}>

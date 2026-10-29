@@ -183,10 +183,12 @@ export class PrintAgent {
           message: 'Drucker reagiert nicht – Papier leer, Deckel offen oder ausgeschaltet?',
         });
       }, this.opts.blockedAfterMs ?? 10_000);
+      const started = Date.now();
       try {
         await this.opts.write(target, data);
         this.printed.set(msg.jobId, Date.now());
         this.send({ type: 'result', jobId: msg.jobId, ok: true });
+        this.opts.log(`Auftrag ${msg.jobId} gedruckt auf ${target.path} (${Date.now() - started} ms)`);
       } catch (err) {
         const error = describeWriteError(err, target);
         this.opts.log(`Druck fehlgeschlagen (Auftrag ${msg.jobId}): ${error}`);

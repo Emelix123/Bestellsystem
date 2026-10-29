@@ -74,9 +74,11 @@ icacls $configFile /inheritance:r /grant:r '*S-1-5-18:F' '*S-1-5-32-544:F' | Out
 $action = New-ScheduledTaskAction -Execute $node -Argument "`"$agentFile`" --config `"$configFile`"" -WorkingDirectory $dir
 $trigger = New-ScheduledTaskTrigger -AtStartup
 $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+# Prioritaet 4 = normal. Standard fuer geplante Aufgaben ist 7 (niedrig) - dann
+# bremst Windows den Agenten aus, sobald der PC etwas anderes zu tun hat.
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable `
   -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) `
-  -MultipleInstances IgnoreNew
+  -MultipleInstances IgnoreNew -Priority 4
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
 Start-ScheduledTask -TaskName $taskName
 

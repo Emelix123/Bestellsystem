@@ -1,0 +1,1 @@
+ALTER TABLE "printers" ALTER COLUMN "codepage" SET DEFAULT 'cp437';

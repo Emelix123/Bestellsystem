@@ -134,7 +134,7 @@ export const printers = pgTable('printers', {
   host: text('host'),
   port: integer('port').notNull().default(9100),
   widthChars: integer('width_chars').notNull().default(48),
-  codepage: text('codepage').$type<'cp858' | 'cp850' | 'cp437' | 'cp1252' | 'ascii'>().notNull().default('cp858'),
+  codepage: text('codepage').$type<'cp858' | 'cp850' | 'cp437' | 'cp1252' | 'ascii'>().notNull().default('cp437'),
   cut: boolean('cut').notNull().default(true),
   status: text('status').$type<'ok' | 'error' | 'offline' | 'unknown'>().notNull().default('unknown'),
   statusMessage: text('status_message'),

@@ -283,6 +283,34 @@ describe('Druck-Agent (USB)', () => {
     pi.close();
   });
 
+  it('druckt sofort weiter, sobald der Drucker wieder da ist', async () => {
+    const pi = (await superadmin.post('/api/admin/agents', { name: 'Raspi Küche' })).body;
+    const key = 'usb:04b8:0e28:K1';
+    const printer = (
+      await superadmin.post('/api/admin/printers', { name: 'Küche USB', type: 'usb', agentId: pi.id, deviceKey: key })
+    ).body;
+    const ws = connect(pi.token);
+    await nextMessage(ws);
+    const jobs: { at: number; msg: ServerToAgent }[] = [];
+    ws.on('message', (raw) => jobs.push({ at: Date.now(), msg: JSON.parse(raw.toString()) }));
+    ws.send(JSON.stringify({ type: 'hello', version: 't', hostname: 'pi', platform: 'Linux', devices: [] }));
+    await superadmin.post(`/api/admin/printers/${printer.id}/test`);
+
+    // Zweimal scheitern (Drucker aus) -> Wartezeit wächst auf 2 s.
+    for (let i = 1; i <= 2; i++) {
+      while (jobs.filter((j) => j.msg.type === 'job').length < i) await new Promise((r) => setTimeout(r, 20));
+      const job = jobs.filter((j) => j.msg.type === 'job')[i - 1].msg;
+      if (job.type === 'job') ws.send(JSON.stringify({ type: 'result', jobId: job.jobId, ok: false, error: 'Drucker aus' }));
+    }
+    await new Promise((r) => setTimeout(r, 100));
+    // Drucker wird eingeschaltet: Agent meldet das Gerät -> Auftrag kommt sofort, nicht erst nach 2 s.
+    const pluggedIn = Date.now();
+    ws.send(JSON.stringify({ type: 'devices', devices: [{ key, path: '/dev/usb/lp0', description: 'TM-T20' }] }));
+    while (jobs.filter((j) => j.msg.type === 'job').length < 3) await new Promise((r) => setTimeout(r, 20));
+    expect(jobs.filter((j) => j.msg.type === 'job')[2].at - pluggedIn).toBeLessThan(1000);
+    ws.close();
+  });
+
   it('ein Rechner mit mehreren Druckern', async () => {
     const pc = (await superadmin.post('/api/admin/agents', { name: 'PC Schank' })).body;
     const devices = [

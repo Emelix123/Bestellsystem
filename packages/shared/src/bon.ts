@@ -1,5 +1,5 @@
 import { normalizeText } from './codepage';
-import type { Codepage } from './types';
+import { CODEPAGES, type Codepage } from './types';
 
 /**
  * Ein Bon wird als einfaches Dokument beschrieben und erst kurz vor dem Druck
@@ -13,7 +13,9 @@ export type BonLine =
   | { t: 'text'; text: string; align?: BonAlign; bold?: boolean; size?: BonSize; invert?: boolean }
   | { t: 'cols'; left: string; right: string; bold?: boolean; size?: BonSize }
   | { t: 'sep'; char?: string }
-  | { t: 'feed'; n?: number };
+  | { t: 'feed'; n?: number }
+  /** Zeichensatz für die folgenden Zeilen wechseln (nur für den Zeichensatz-Test). */
+  | { t: 'codepage'; codepage: Codepage };
 
 export interface BonDoc {
   lines: BonLine[];
@@ -33,6 +35,8 @@ export interface LaidOutLine {
   size: BonSize;
   bold: boolean;
   invert: boolean;
+  /** Zeichensatz, in dem diese Zeile gedruckt wird. */
+  codepage: Codepage;
 }
 
 function wrap(text: string, width: number): string[] {
@@ -80,12 +84,16 @@ function indentFor(text: string, width: number, how: BonAlign): number {
  */
 export function layoutBon(doc: BonDoc, profile: BonProfile): LaidOutLine[] {
   const out: LaidOutLine[] = [];
+  let codepage = profile.codepage;
   for (const line of doc.lines) {
     switch (line.t) {
+      case 'codepage':
+        codepage = line.codepage;
+        break;
       case 'text': {
         const size = line.size ?? 1;
         const width = Math.max(1, Math.floor(profile.widthChars / size));
-        const text = normalizeText(line.text, profile.codepage);
+        const text = normalizeText(line.text, codepage);
         for (const part of wrap(text, width)) {
           out.push({
             indent: indentFor(part, width, line.align ?? 'left'),
@@ -93,6 +101,7 @@ export function layoutBon(doc: BonDoc, profile: BonProfile): LaidOutLine[] {
             size,
             bold: !!line.bold,
             invert: !!line.invert,
+            codepage,
           });
         }
         break;
@@ -100,21 +109,21 @@ export function layoutBon(doc: BonDoc, profile: BonProfile): LaidOutLine[] {
       case 'cols': {
         const size = line.size ?? 1;
         const width = Math.max(1, Math.floor(profile.widthChars / size));
-        const left = normalizeText(line.left, profile.codepage);
-        const right = normalizeText(line.right, profile.codepage);
+        const left = normalizeText(line.left, codepage);
+        const right = normalizeText(line.right, codepage);
         const leftLines = wrap(left, right ? Math.max(1, width - right.length - 1) : width);
         leftLines.forEach((l, i) => {
           const isLast = i === leftLines.length - 1;
           const text = isLast && right ? l + ' '.repeat(Math.max(1, width - l.length - right.length)) + right : l;
-          out.push({ indent: 0, text, size, bold: !!line.bold, invert: false });
+          out.push({ indent: 0, text, size, bold: !!line.bold, invert: false, codepage });
         });
         break;
       }
       case 'sep':
-        out.push({ indent: 0, text: (line.char ?? '-').repeat(profile.widthChars), size: 1, bold: false, invert: false });
+        out.push({ indent: 0, text: (line.char ?? '-').repeat(profile.widthChars), size: 1, bold: false, invert: false, codepage });
         break;
       case 'feed':
-        for (let i = 0; i < (line.n ?? 1); i++) out.push({ indent: 0, text: '', size: 1, bold: false, invert: false });
+        for (let i = 0; i < (line.n ?? 1); i++) out.push({ indent: 0, text: '', size: 1, bold: false, invert: false, codepage });
         break;
     }
   }
@@ -236,4 +245,40 @@ export function buildTestBon(input: { printerName: string; profile: BonProfile; 
       { t: 'text', text: 'Die Zeile oben muss genau eine Zeile füllen.', align: 'center' },
     ],
   };
+}
+
+const CODEPAGE_SHORT: Record<Codepage, string> = {
+  cp437: 'PC437',
+  cp850: 'PC850',
+  cp858: 'PC858',
+  cp1252: 'Windows-1252',
+  ascii: 'Nur ASCII',
+};
+
+/**
+ * Druckt dieselbe Zeile mit Umlauten in jedem Zeichensatz. Günstige Bondrucker
+ * nummerieren ihre Zeichensätze unterschiedlich – so sieht man auf einen Blick,
+ * welche Einstellung bei genau diesem Drucker stimmt.
+ */
+export function buildCodepageTestBon(printerName: string): BonDoc {
+  const sample = 'Küche Getränke ÄÖÜ äöü ß';
+  const lines: BonLine[] = [
+    // Kopf und Anleitung immer in reinem ASCII – lesbar, egal was der Drucker kann.
+    { t: 'codepage', codepage: 'ascii' },
+    { t: 'text', text: ' ZEICHENSATZ-TEST ', align: 'center', size: 2, bold: true, invert: true },
+    { t: 'text', text: printerName, align: 'center', bold: true },
+    { t: 'text', text: 'Welche Zeile zeigt die Umlaute richtig?' },
+    { t: 'sep' },
+  ];
+  for (const codepage of CODEPAGES) {
+    lines.push({ t: 'codepage', codepage });
+    lines.push({ t: 'text', text: `${CODEPAGE_SHORT[codepage]}:`, bold: true });
+    lines.push({ t: 'text', text: `  ${sample}${codepage === 'cp858' || codepage === 'cp1252' ? ' €' : ''}` });
+  }
+  lines.push(
+    { t: 'codepage', codepage: 'ascii' },
+    { t: 'sep' },
+    { t: 'text', text: 'Den Namen der richtigen Zeile im Admin unter Drucker > Bearbeiten > Zeichensatz einstellen.' },
+  );
+  return { lines };
 }

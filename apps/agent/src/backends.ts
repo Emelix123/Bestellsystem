@@ -35,13 +35,28 @@ export function linuxBackend(opts: { extra?: string; sysRoot?: string; devRoot?:
   };
 }
 
-export function windowsBackend(opts: { extra?: string; spooler: WindowsSpooler }): PrinterBackend {
+/**
+ * Windows: Drucken und Druckerliste laufen in getrennten Hilfsprozessen. Die
+ * Abfrage der Druckerliste (WMI) dauert unter Windows oft eine Sekunde oder
+ * länger – ein Bon soll nie dahinter warten müssen.
+ */
+export function windowsBackend(opts: {
+  extra?: string;
+  spooler: WindowsSpooler;
+  lister?: WindowsSpooler;
+  keepAwake?: boolean;
+  log?(message: string): void;
+}): PrinterBackend {
   let known = new Map<string, WindowsPrinter>();
+  const lister = opts.lister ?? opts.spooler;
+  if (opts.keepAwake) {
+    opts.spooler.keepAwake().catch((err: Error) => opts.log?.(`PC wach halten nicht möglich: ${err.message}`));
+  }
   return {
     platform: 'Windows',
     rescanIntervalMs: 5000,
     async discover() {
-      const printers = (await opts.spooler.list()).filter((p) => !isVirtualPrinter(p));
+      const printers = (await lister.list()).filter((p) => !isVirtualPrinter(p));
       known = new Map(printers.map((p) => [p.name, p]));
       return [...printers.map(windowsDevice), ...extraDevices(opts.extra)];
     },
@@ -55,6 +70,7 @@ export function windowsBackend(opts: { extra?: string; spooler: WindowsSpooler }
     },
     close() {
       opts.spooler.close();
+      lister.close();
     },
   };
 }

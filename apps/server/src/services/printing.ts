@@ -35,7 +35,7 @@ export interface EnqueueInput {
   orderId?: number | null;
 }
 
-const MAX_BACKOFF_MS = 15_000;
+const MAX_BACKOFF_MS = 10_000;
 
 function backoff(attempts: number) {
   return Math.min(MAX_BACKOFF_MS, 1000 * 2 ** Math.max(0, attempts - 1));
@@ -305,6 +305,13 @@ export class PrintService {
     for (const printer of rows) {
       if (printer.type !== 'usb') continue;
       const device = printer.deviceKey ? devices.find((d) => d.key === printer.deviceKey) : undefined;
+      if (device) {
+        // Drucker (wieder) da: wartende Aufträge sofort versuchen, nicht erst nach Ablauf der Wartezeit.
+        await this.db
+          .update(printJobs)
+          .set({ nextAttemptAt: new Date() })
+          .where(and(eq(printJobs.printerId, printer.id), eq(printJobs.status, 'pending')));
+      }
       if (!printer.deviceKey) await this.setPrinterStatus(printer, 'error', 'Kein Drucker am Agent ausgewählt');
       else if (!device) await this.setPrinterStatus(printer, 'error', 'Drucker am Agent nicht gefunden (Kabel/Strom?)');
       // Vom Betriebssystem gemeldetes Problem (z. B. Windows: offline, Warteschlange hängt).

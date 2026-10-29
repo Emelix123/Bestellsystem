@@ -1,5 +1,6 @@
 import { layoutBon, type BonDoc, type BonProfile } from './bon';
 import { CODEPAGE_ESC_T, encodeText } from './codepage';
+import type { Codepage } from './types';
 
 const ESC = 0x1b;
 const GS = 0x1d;
@@ -19,8 +20,15 @@ export interface EscPosProfile extends BonProfile {
  */
 export function renderEscPos(doc: BonDoc, profile: EscPosProfile): Uint8Array {
   const out: number[] = [ESC, 0x40]; // ESC @ – Drucker zurücksetzen
-  const table = CODEPAGE_ESC_T[profile.codepage];
-  if (table !== null) out.push(ESC, 0x74, table); // ESC t n – Codetabelle
+  let currentTable: number | null = null;
+  const setCodepage = (codepage: Codepage) => {
+    const table = CODEPAGE_ESC_T[codepage];
+    // "Nur ASCII" braucht keine Tabelle – die unteren 128 Zeichen sind überall gleich.
+    if (table === null || table === currentTable) return;
+    out.push(ESC, 0x74, table); // ESC t n – Codetabelle
+    currentTable = table;
+  };
+  setCodepage(profile.codepage);
 
   let currentSize = 1;
   let currentBold = false;
@@ -39,9 +47,10 @@ export function renderEscPos(doc: BonDoc, profile: EscPosProfile): Uint8Array {
   for (const line of layoutBon(doc, profile)) {
     setSize(line.size);
     setBold(line.bold);
+    setCodepage(line.codepage);
     for (let i = 0; i < line.indent; i++) out.push(0x20);
     if (line.invert) out.push(GS, 0x42, 1); // GS B 1 – weiß auf schwarz
-    out.push(...encodeText(line.text, profile.codepage));
+    out.push(...encodeText(line.text, line.codepage));
     if (line.invert) out.push(GS, 0x42, 0);
     out.push(LF);
   }

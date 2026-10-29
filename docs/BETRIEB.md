@@ -103,7 +103,12 @@ Danach erscheint der Agent im Admin-Bereich als **verbunden**.
 Anschließend unter **Drucker → Neuer Drucker** den Typ „USB“ wählen, dann den Agenten
 und den angezeigten USB-Drucker auswählen. Mit **Testdruck** prüfen:
 
-- **Umlaute falsch?** Zeichensatz auf PC437 oder „Nur ASCII“ stellen.
+- **Umlaute falsch** (z. B. „KYCHE“ statt „KÜCHE“, „GETRONKE“ statt „GETRÄNKE“)?
+  Beim Drucker auf **Zeichensatz-Test** klicken. Der Bon zeigt dieselbe Zeile in jedem
+  Zeichensatz; den Namen der richtigen Zeile unter **Bearbeiten → Zeichensatz**
+  einstellen. Hintergrund: Günstige Bondrucker nummerieren ihre Zeichensätze
+  unterschiedlich. PC437 (Standard) klappt fast überall, PC858 bei vielen Nachbauten
+  nicht.
 - **Zeile zu lang oder zu kurz?** Papierbreite anpassen (58 mm = 32, 80 mm = 48 Zeichen).
 - **Kein Schnitt?** Manche Drucker haben kein Schneidwerk. Dann „Papier abschneiden“ ausschalten.
 
@@ -153,20 +158,30 @@ Get-ScheduledTask "Bestellsystem Druck-Agent" | Get-ScheduledTaskInfo         # 
   virtueller Drucker (PDF, XPS, Fax – werden bewusst ausgeblendet). Netzwerk-Drucker,
   die nur für einen angemeldeten Benutzer verbunden sind (`\\Server\Drucker`), sieht
   der SYSTEM-Dienst nicht; Bondrucker direkt per USB anschließen.
-- **„Windows meldet den Drucker als offline“:** USB-Kabel, Strom, ggf. in den
-  Druckereinstellungen „Drucker offline verwenden“ abschalten. Solange Windows offline
-  meldet, nimmt der Agent keine Aufträge an – sie warten sichtbar auf dem Server statt
-  unbemerkt in der Windows-Warteschlange.
+- **„Windows meldet den Drucker als offline“:** Nur ein Hinweis. Viele USB-Bondrucker
+  gelten bei Windows im Energiesparmodus als offline und wachen erst auf, wenn Daten
+  kommen – der Agent druckt deshalb trotzdem. Kommt wirklich nichts: USB-Kabel, Strom,
+  in den Druckereinstellungen „Drucker offline verwenden“ abschalten.
 - **„Windows-Druckerwarteschlange hängt“:** Ein Auftrag steckt länger als 20 s in der
   Windows-Warteschlange. In Windows die Warteschlange des Druckers öffnen und den
   hängenden Auftrag löschen; danach druckt der Agent automatisch weiter.
-- **Energiesparen:** Den PC so einstellen, dass er nicht in den Standby geht, solange
-  das Fest läuft (Einstellungen → System → Energie).
+- **Energiesparen:** Der Agent verhindert den automatischen Standby, solange er läuft.
+  Zuklappen des Laptops oder manuelles „Energie sparen“ verhindert er nicht.
+- **Bons kommen verzögert?** Im Admin unter **Druckaufträge** steht bei jedem Bon, nach
+  wie vielen Sekunden er gedruckt wurde. Im `agent.log` steht pro Bon die Dauer am
+  Rechner („Auftrag 12 gedruckt auf … (85 ms)“). Ist die Zeit im Protokoll kurz, aber im
+  Admin lang, liegt es am Netz/WLAN; ist sie im Protokoll lang, am PC oder Drucker.
+  Außerdem hilft: in den Windows-Energieoptionen „Selektives USB-Energiesparen“
+  deaktivieren und beim Drucker (falls einstellbar) den Ruhemodus abschalten.
+- **Agent aktualisieren:** Den Installationsbefehl aus dem Admin einfach erneut
+  ausführen (mit dem bisherigen Token). Der Agent wird gestoppt, ersetzt und neu
+  gestartet.
 - **Updates:** Windows-Updates mit Neustart vor dem Fest erledigen, nicht währenddessen.
 
-Ehrlicher Hinweis: Der Windows-Weg ist mit einem simulierten Windows-Druckdienst
-getestet, nicht auf einem echten Windows-PC mit Bondrucker. Bitte im Probelauf mit
-eurem Drucker ausprobieren (Testdruck, Umlaute, Schnitt).
+Hinweis: Die automatischen Tests simulieren den Windows-Druckdienst; der erste
+Praxistest auf einem Windows-PC hat bereits zwei Fehler aufgedeckt (falscher
+Zeichensatz bei Nachbau-Druckern, Verzögerung durch „offline“). Bitte im Probelauf
+mit jedem Drucker Testdruck und Zeichensatz-Test machen.
 
 ### 4.4 Fehlersuche unter Linux / Raspberry Pi
 
