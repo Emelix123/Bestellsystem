@@ -109,7 +109,16 @@ und den angezeigten USB-Drucker auswählen. Mit **Testdruck** prüfen:
   einstellen. Hintergrund: Günstige Bondrucker nummerieren ihre Zeichensätze
   unterschiedlich. PC437 (Standard) klappt fast überall, PC858 bei vielen Nachbauten
   nicht.
-- **Zeile zu lang oder zu kurz?** Papierbreite anpassen (58 mm = 32, 80 mm = 48 Zeichen).
+- **Zeile zu lang oder zu kurz?** Papierbreite anpassen (58 mm = 32, 80 mm = 48 Zeichen;
+  manche 80-mm-Drucker drucken nur 512 Punkte breit = 42 Zeichen). Im Testdruck muss die
+  Ziffernzeile genau eine Zeile füllen.
+
+**Erfahrungswerte einzelner Modelle**
+
+| Drucker | Papierbreite | Zeichensatz | Hinweise |
+|---|---|---|---|
+| MUNBYN ITPP047 (Treiber „POS Printer Driver V8.11“) | 80 mm, laut Druckerdatenbank 512 Punkte → **42 Zeichen** (per Testdruck prüfen, sonst 48) | **PC437** (PC858 lieferte im Praxistest griechische Zeichen: „KYCHE“) | Schneidwerk vorhanden; hat auch einen **LAN-Anschluss** → per Kabel als „Netzwerk (TCP 9100)“ ohne Agent-PC nutzbar |
+| Epson TM-T20/TM-T88 | 48 Zeichen | PC858 (mit €) oder PC437 | – |
 - **Kein Schnitt?** Manche Drucker haben kein Schneidwerk. Dann „Papier abschneiden“ ausschalten.
 
 ### 4.3 Windows-PC als Druck-Agent

@@ -30,8 +30,8 @@ interface Draft {
 
 const WIDTHS = [
   { value: 32, label: '58 mm (32 Zeichen)' },
-  { value: 42, label: '80 mm, kleine Schrift (42 Zeichen)' },
-  { value: 48, label: '80 mm (48 Zeichen)' },
+  { value: 42, label: '80 mm mit schmalerem Druckbereich (42 Zeichen, z. B. MUNBYN ITPP047)' },
+  { value: 48, label: '80 mm (48 Zeichen, z. B. Epson TM-T20/T88)' },
 ];
 
 export function PrintersPage() {
@@ -391,7 +391,10 @@ export function PrintersPage() {
                 </Field>
               </div>
             )}
-            <Field label="Papierbreite">
+            <Field
+              label="Papierbreite"
+              hint="Prüfen per Testdruck: Die Ziffernzeile „1234567890…“ muss genau eine Zeile füllen. Bricht sie um, die kleinere Breite wählen."
+            >
               <Select value={draft.widthChars} onChange={(e) => setDraft({ ...draft, widthChars: Number(e.target.value) })}>
                 {WIDTHS.map((w) => (
                   <option key={w.value} value={w.value}>
